@@ -31,7 +31,7 @@ def merge_rdf(archives, remove_old_files: false)
     # x.report("Store new elements to hash #{newer_file_path}") do
       newer_doc.root.element_children.each do |element|
         rdf_about = element.attribute('about')&.value
-        newer_elements[rdf_about] = element if rdf_about
+        newer_elements[rdf_about.sub(/^https?:/, "")] = element if rdf_about
       end
     # end
 
@@ -39,9 +39,9 @@ def merge_rdf(archives, remove_old_files: false)
     # x.report("Replace elements in the older document") do
       older_doc.root.element_children.each do |element|
         rdf_about = element.attribute('about')&.value
-        if rdf_about && newer_elements[rdf_about]
-          element.replace(newer_elements[rdf_about])
-          newer_elements.delete(rdf_about)
+        if rdf_about && newer_elements[url = rdf_about.sub(/^https?:/, "")]
+          element.replace(newer_elements[url])
+          newer_elements.delete(url)
         end
       end
     # end
@@ -61,11 +61,13 @@ def merge_rdf(archives, remove_old_files: false)
         end
       end
     # end
-    merged_file_path = "merged/#{idx}.rdf"
+    merged_file_path = "merged/#{idx.to_s.rjust(5, '0')}.rdf"
     File.write(merged_file_path, older_doc.to_xml)
     puts "Merge #{older_file_path} and #{newer_file_path} into #{merged_file_path}"
   end
 end
+
+Dir['merged/*.rdf'].each { |file| File.delete(file) }
 
 archives = Dir['archives/*.rdf'].sort
 merge_rdf(archives)
